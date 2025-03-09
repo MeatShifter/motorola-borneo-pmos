@@ -1,0 +1,63 @@
+# Reference: <https://postmarketos.org/vendorkernel>
+# Kernel config based on: arch/arm64/configs/(CHANGEME!)
+
+pkgname=linux-motorola-borneo
+pkgver=4.19.325
+pkgrel=0
+pkgdesc="Motorola Moto G Power 2021 kernel fork"
+arch="aarch64"
+_carch="arm64"
+_flavor="motorola-borneo"
+url="https://kernel.org"
+license="GPL-2.0-only"
+options="!strip !check !tracedeps pmb:cross-native"
+makedepends="
+	bash
+	bc
+	bison
+	devicepkg-dev
+	findutils
+	flex
+	openssl-dev
+	perl
+	xz
+	linux-headers
+	mkbootimg
+"
+
+# Source
+_repository="android_kernel_motorola_sm6225"
+_commit="4c2f69ad11d7904955725cd34487b3cee985af73"
+_config="config-$_flavor.$arch"
+source="
+	$pkgname-$_commit.tar.gz::https://github.com/LineageOS/$_repository/archive/$_commit.tar.gz
+	$_config
+	dsi-fix-double-static.patch
+"
+builddir="$srcdir/$_repository-$_commit"
+_outdir="out"
+
+prepare() {
+	default_prepare
+	REPLACE_GCCH=0 . downstreamkernel_prepare
+}
+
+build() {
+	unset LDFLAGS
+	make O="$_outdir" ARCH="$_carch" CC="${CC:-gcc}" \
+		KBUILD_BUILD_VERSION="$((pkgrel + 1 ))-postmarketOS"
+}
+
+package() {
+	downstreamkernel_package "$builddir" "$pkgdir" "$_carch" \
+		"$_flavor" "$_outdir"
+
+	make dtbs_install O="$_outdir" ARCH="$_carch" \
+		INSTALL_DTBS_PATH="$pkgdir"/boot/dtbs
+}
+
+sha512sums="
+5d77288eb2fa75c1e0d3d6ec0cf258aead10b35afbd3b877033fa2c4d16ea36675f595ca7653ad108c05a5977ba5d375cd9b6917c17ec1cfa955275e9e9675f5  linux-motorola-borneo-4c2f69ad11d7904955725cd34487b3cee985af73.tar.gz
+2a45b811c3cdcd65010d0b1e31dce9ef21f5326ca55cc095247f0450ba41d54784cfabf54c30c49987655e4c5d84c4989e37b86a48f92a81f0b4facbf95efff1  config-motorola-borneo.aarch64
+1de63a036d0f02d830b237e0a1f94f1de019867ea3e94a073adbed6503e2b6ed6664b3018b37efd8e45f9e3055587ec117ab9f08e9e941e8f20c5a79053b1cc1  dsi-fix-double-static.patch
+"
